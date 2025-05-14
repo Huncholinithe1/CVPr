@@ -1,0 +1,152 @@
+@page "/admin/skills"
+@using CVProfile.Data.Models
+@using CVProfile.Web.Services
+@using Microsoft.AspNetCore.Authorization
+@inject ICVService CVService
+@attribute [Authorize]
+
+<div class="container mt-4">
+    <h2>Manage Skills</h2>
+
+    @if (skills == null)
+    {
+        <p>Loading...</p>
+    }
+    else
+    {
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Years of Experience</th>
+                        <th>Skill Level</th>
+                        <th>Icon Class</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var skill in skills)
+                    {
+                        <tr>
+                            <td>@skill.Name</td>
+                            <td>@skill.YearsOfExperience</td>
+                            <td>@skill.SkillLevel%</td>
+                            <td><i class="@skill.IconClass"></i> @skill.IconClass</td>
+                            <td>
+                                <button class="btn btn-sm btn-primary" @onclick="() => EditSkill(skill)">Edit</button>
+                                <button class="btn btn-sm btn-danger" @onclick="() => DeleteSkill(skill.Id)">Delete</button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h3 class="mb-0">@(editingSkill?.Id > 0 ? "Edit" : "Add") Skill</h3>
+            </div>
+            <div class="card-body">
+                <EditForm Model="@currentSkill" OnValidSubmit="SaveSkill">
+                    <DataAnnotationsValidator />
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Name</label>
+                        <InputText id="name" class="form-control" @bind-Value="currentSkill.Name" />
+                        <ValidationMessage For="@(() => currentSkill.Name)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="yearsExp" class="form-label">Years of Experience</label>
+                        <InputNumber id="yearsExp" class="form-control" @bind-Value="currentSkill.YearsOfExperience" />
+                        <ValidationMessage For="@(() => currentSkill.YearsOfExperience)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="skillLevel" class="form-label">Skill Level (1-100)</label>
+                        <InputNumber id="skillLevel" class="form-control" @bind-Value="currentSkill.SkillLevel" />
+                        <ValidationMessage For="@(() => currentSkill.SkillLevel)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="iconClass" class="form-label">Icon Class (Font Awesome)</label>
+                        <InputText id="iconClass" class="form-control" @bind-Value="currentSkill.IconClass" />
+                        <small class="form-text text-muted">Example: fas fa-code</small>
+                        <ValidationMessage For="@(() => currentSkill.IconClass)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description (Optional)</label>
+                        <InputTextArea id="description" class="form-control" @bind-Value="currentSkill.Description" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Save</button>
+                    @if (editingSkill?.Id > 0)
+                    {
+                        <button type="button" class="btn btn-secondary" @onclick="CancelEdit">Cancel</button>
+                    }
+                </EditForm>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<Skill>? skills;
+    private Skill currentSkill = new();
+    private Skill? editingSkill;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSkills();
+    }
+
+    private async Task LoadSkills()
+    {
+        skills = await CVService.GetSkillsAsync();
+    }
+
+    private void EditSkill(Skill skill)
+    {
+        editingSkill = skill;
+        currentSkill = new Skill
+        {
+            Id = skill.Id,
+            Name = skill.Name,
+            YearsOfExperience = skill.YearsOfExperience,
+            SkillLevel = skill.SkillLevel,
+            IconClass = skill.IconClass,
+            Description = skill.Description
+        };
+    }
+
+    private async Task SaveSkill()
+    {
+        if (editingSkill?.Id > 0)
+        {
+            await CVService.UpdateSkillAsync(currentSkill);
+        }
+        else
+        {
+            await CVService.AddSkillAsync(currentSkill);
+        }
+
+        await LoadSkills();
+        CancelEdit();
+    }
+
+    private async Task DeleteSkill(int id)
+    {
+        if (await CVService.DeleteSkillAsync(id))
+        {
+            await LoadSkills();
+        }
+    }
+
+    private void CancelEdit()
+    {
+        editingSkill = null;
+        currentSkill = new();
+    }
+} 

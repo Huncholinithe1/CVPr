@@ -1,0 +1,146 @@
+@page "/admin/projects"
+@using CVProfile.Data.Models
+@using CVProfile.Web.Services
+@using Microsoft.EntityFrameworkCore
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@attribute [Authorize]
+@inject CVProfile.Data.Data.ApplicationDbContext Context
+@inject NavigationManager NavigationManager
+@inject ICVService CVService
+
+<h3>Manage Projects</h3>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h4>Add New Project</h4>
+                <EditForm Model="@newProject" OnValidSubmit="@HandleValidSubmit">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Project Name</label>
+                        <InputText id="name" class="form-control" @bind-Value="newProject.Name" />
+                        <ValidationMessage For="@(() => newProject.Name)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="description" class="form-label">Description</label>
+                        <InputTextArea id="description" class="form-control" @bind-Value="newProject.Description" />
+                        <ValidationMessage For="@(() => newProject.Description)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="technologies" class="form-label">Technologies Used</label>
+                        <InputText id="technologies" class="form-control" @bind-Value="newProject.Technologies" />
+                        <ValidationMessage For="@(() => newProject.Technologies)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="completion" class="form-label">Completion Date</label>
+                        <InputDate id="completion" class="form-control" @bind-Value="newProject.CompletionDate" />
+                        <ValidationMessage For="@(() => newProject.CompletionDate)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="url" class="form-label">Project URL</label>
+                        <InputText id="url" class="form-control" @bind-Value="newProject.ProjectUrl" />
+                        <ValidationMessage For="@(() => newProject.ProjectUrl)" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="image" class="form-label">Image URL</label>
+                        <InputText id="image" class="form-control" @bind-Value="newProject.ImageUrl" />
+                        <ValidationMessage For="@(() => newProject.ImageUrl)" />
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">Add Project</button>
+                </EditForm>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h4>Existing Projects</h4>
+                @if (projects == null)
+                {
+                    <p>Loading...</p>
+                }
+                else if (!projects.Any())
+                {
+                    <p>No projects found.</p>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Technologies</th>
+                                    <th>Completion</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var project in projects)
+                                {
+                                    <tr>
+                                        <td>@project.Name</td>
+                                        <td>@project.Technologies</td>
+                                        <td>@project.CompletionDate.ToString("MMM yyyy")</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-danger" @onclick="() => DeleteProject(project)">
+                                                Delete
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private List<Project> projects = new();
+    private Project newProject = new Project
+    {
+        CompletionDate = DateTime.Today
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProjects();
+    }
+
+    private async Task LoadProjects()
+    {
+        projects = await CVService.GetProjectsAsync();
+    }
+
+    private async Task HandleValidSubmit()
+    {
+        await CVService.AddProjectAsync(newProject);
+        newProject = new Project
+        {
+            CompletionDate = DateTime.Today
+        };
+        await LoadProjects();
+    }
+
+    private async Task DeleteProject(Project project)
+    {
+        if (await CVService.DeleteProjectAsync(project.Id))
+        {
+            await LoadProjects();
+        }
+    }
+} 

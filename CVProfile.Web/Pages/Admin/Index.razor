@@ -1,0 +1,292 @@
+@page "/admin"
+@using CVProfile.Data.Models
+@using Microsoft.AspNetCore.Authorization
+@using CVProfile.Web.Services
+@inject ICVService CVService
+@attribute [Authorize]
+
+<PageTitle>Admin - CV-profil</PageTitle>
+
+<div class="container mt-4">
+    <h2>Admin Dashboard</h2>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            @errorMessage
+            <button type="button" class="btn-close" @onclick="() => errorMessage = null"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            @successMessage
+            <button type="button" class="btn-close" @onclick="() => successMessage = null"></button>
+        </div>
+    }
+
+    <div class="row mt-4">
+        <!-- Skills Section -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Hantera Färdigheter</h3>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="@newSkill" OnValidSubmit="AddSkill">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label for="skillName" class="form-label">Teknologinamn</label>
+                            <InputText id="skillName" class="form-control" @bind-Value="newSkill.Name" />
+                            <ValidationMessage For="@(() => newSkill.Name)" />
+                            <small class="text-muted">T.ex. C#, JavaScript, Azure</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="yearsExp" class="form-label">Års erfarenhet</label>
+                            <InputNumber id="yearsExp" class="form-control" @bind-Value="newSkill.YearsOfExperience" />
+                            <ValidationMessage For="@(() => newSkill.YearsOfExperience)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="skillLevel" class="form-label">Färdighetsnivå (1-100)</label>
+                            <InputNumber id="skillLevel" class="form-control" @bind-Value="newSkill.SkillLevel" />
+                            <ValidationMessage For="@(() => newSkill.SkillLevel)" />
+                            <small class="text-muted">1 = Nybörjare, 100 = Expert</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="iconClass" class="form-label">Ikon-klass (Font Awesome)</label>
+                            <InputText id="iconClass" class="form-control" @bind-Value="newSkill.IconClass" />
+                            <ValidationMessage For="@(() => newSkill.IconClass)" />
+                            <small class="text-muted">T.ex. fab fa-csharp, fab fa-js, fab fa-azure</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="skillDesc" class="form-label">Beskrivning (Valfritt)</label>
+                            <InputTextArea id="skillDesc" class="form-control" @bind-Value="newSkill.Description" />
+                            <small class="text-muted">Kort beskrivning av din erfarenhet med teknologin</small>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Lägg till färdighet</button>
+                    </EditForm>
+
+                    @if (skills != null && skills.Any())
+                    {
+                        <div class="mt-4">
+                            <h4>Befintliga färdigheter</h4>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Namn</th>
+                                            <th>År</th>
+                                            <th>Nivå</th>
+                                            <th>Åtgärder</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var skill in skills)
+                                        {
+                                            <tr>
+                                                <td>@skill.Name</td>
+                                                <td>@skill.YearsOfExperience</td>
+                                                <td>@skill.SkillLevel%</td>
+                                                <td>
+                                                    <button class="btn btn-danger btn-sm" @onclick="() => DeleteSkill(skill.Id)">Ta bort</button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Projects Section -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="mb-0">Hantera Projekt</h3>
+                </div>
+                <div class="card-body">
+                    <EditForm Model="@newProject" OnValidSubmit="AddProject">
+                        <DataAnnotationsValidator />
+
+                        <div class="mb-3">
+                            <label for="projectName" class="form-label">Projektnamn</label>
+                            <InputText id="projectName" class="form-control" @bind-Value="newProject.Name" />
+                            <ValidationMessage For="@(() => newProject.Name)" />
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="projectDesc" class="form-label">Beskrivning</label>
+                            <InputTextArea id="projectDesc" class="form-control" @bind-Value="newProject.Description" />
+                            <ValidationMessage For="@(() => newProject.Description)" />
+                            <small class="text-muted">Beskriv projektets syfte och ditt bidrag</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="technologies" class="form-label">Använda teknologier</label>
+                            <InputText id="technologies" class="form-control" @bind-Value="newProject.Technologies" />
+                            <ValidationMessage For="@(() => newProject.Technologies)" />
+                            <small class="text-muted">T.ex. C#, Blazor, Entity Framework</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="githubUrl" class="form-label">GitHub URL (Valfritt)</label>
+                            <InputText id="githubUrl" class="form-control" @bind-Value="newProject.GitHubUrl" />
+                            <small class="text-muted">Länk till projektets GitHub-repository</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="liveUrl" class="form-label">Live URL (Valfritt)</label>
+                            <InputText id="liveUrl" class="form-control" @bind-Value="newProject.LiveUrl" />
+                            <small class="text-muted">Länk till den publicerade applikationen</small>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="completionDate" class="form-label">Slutförandedatum</label>
+                            <InputDate id="completionDate" class="form-control" @bind-Value="newProject.CompletionDate" />
+                            <ValidationMessage For="@(() => newProject.CompletionDate)" />
+                        </div>
+
+                        <button type="submit" class="btn btn-primary">Lägg till projekt</button>
+                    </EditForm>
+
+                    @if (projects != null && projects.Any())
+                    {
+                        <div class="mt-4">
+                            <h4>Befintliga projekt</h4>
+                            <div class="table-responsive">
+                                <table class="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Namn</th>
+                                            <th>Teknologier</th>
+                                            <th>Åtgärder</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach (var project in projects)
+                                        {
+                                            <tr>
+                                                <td>@project.Name</td>
+                                                <td>@project.Technologies</td>
+                                                <td>
+                                                    <button class="btn btn-danger btn-sm" @onclick="() => DeleteProject(project.Id)">Ta bort</button>
+                                                </td>
+                                            </tr>
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private Skill newSkill = new();
+    private Project newProject = new() { CompletionDate = DateTime.Today };
+    private List<Skill> skills;
+    private List<Project> projects;
+    private string errorMessage;
+    private string successMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            skills = await CVService.GetSkillsAsync();
+            projects = await CVService.GetProjectsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Det gick inte att ladda data: " + ex.Message;
+        }
+    }
+
+    private async Task AddSkill()
+    {
+        try 
+        {
+            await CVService.AddSkillAsync(newSkill);
+            successMessage = $"Färdigheten {newSkill.Name} har lagts till!";
+            newSkill = new();
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Det gick inte att lägga till färdigheten: " + ex.Message;
+        }
+    }
+
+    private async Task AddProject()
+    {
+        try 
+        {
+            await CVService.AddProjectAsync(newProject);
+            successMessage = $"Projektet {newProject.Name} har lagts till!";
+            newProject = new() { CompletionDate = DateTime.Today };
+            await LoadData();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Det gick inte att lägga till projektet: " + ex.Message;
+        }
+    }
+
+    private async Task DeleteSkill(int id)
+    {
+        try
+        {
+            if (await CVService.DeleteSkillAsync(id))
+            {
+                successMessage = "Färdigheten har tagits bort!";
+                await LoadData();
+            }
+            else
+            {
+                errorMessage = "Kunde inte hitta färdigheten att ta bort.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Det gick inte att ta bort färdigheten: " + ex.Message;
+        }
+    }
+
+    private async Task DeleteProject(int id)
+    {
+        try
+        {
+            if (await CVService.DeleteProjectAsync(id))
+            {
+                successMessage = "Projektet har tagits bort!";
+                await LoadData();
+            }
+            else
+            {
+                errorMessage = "Kunde inte hitta projektet att ta bort.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = "Det gick inte att ta bort projektet: " + ex.Message;
+        }
+    }
+} 
